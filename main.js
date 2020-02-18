@@ -1,14 +1,13 @@
-// TODO
-// Triplanar mapping
-
 import * as THREE from './lib/three.module.js';
 import { FlyControls } from './lib/FlyControls.js';
 
-var camera, scene, renderer;
-var mesh, material, controls;
+
 const MAPBOX_API_KEY = window.location.search.substr(1);
 const NUM_DIVS = 512;
 const textureLoader = new THREE.TextureLoader();
+
+var camera, scene, renderer;
+var mesh, material, controls;
 
 init();
 animate();
@@ -51,6 +50,7 @@ function init() {
       varying vec2 vUv;
       varying vec3 vNormal;
       varying float vElevation;
+      varying vec3 vPos;
 
       uniform sampler2D map;
       uniform float texOffset;
@@ -68,6 +68,7 @@ function init() {
         // Display in Z by the elevation (plus a fudge factor)
         vElevation = getElevation(vUv);
         pos.z += vElevation * 0.03;
+        vPos = pos;
 
         // Get the gradient from the heightfield and compute a normal for simple shading
         float xDiff = getElevation(vUv + vec2(texOffset, 0.0)) - getElevation(vUv - vec2(texOffset, 0.0));
@@ -80,19 +81,61 @@ function init() {
     `,
     fragmentShader: `
       varying vec2 vUv;
+      varying vec3 vPos;
       varying vec3 vNormal;
       varying float vElevation;
 
       uniform sampler2D gradient;
 
+      // hash, noise, and fbm functions from https://www.shadertoy.com/view/lsf3WH
+      float hash(vec2 p)  // replace this by something better
+      {
+          p  = 50.0*fract( p*0.3183099 + vec2(0.71,0.113));
+          return -1.0+2.0*fract( p.x*p.y*(p.x+p.y) );
+      }
+
+      float noise( in vec2 p )
+      {
+          vec2 i = floor( p );
+          vec2 f = fract( p );
+
+        vec2 u = f*f*(3.0-2.0*f);
+
+          return mix( mix( hash( i + vec2(0.0,0.0) ),
+                           hash( i + vec2(1.0,0.0) ), u.x),
+                      mix( hash( i + vec2(0.0,1.0) ),
+                           hash( i + vec2(1.0,1.0) ), u.x), u.y);
+      }
+
+      float fbm(vec2 uv) {
+        // uv *= 8.0;
+        mat2 m = mat2( 1.6,  1.2, -1.2,  1.6 );
+        float f = 0.5000*noise( uv ); uv = m*uv;
+        f += 0.2500*noise( uv ); uv = m*uv;
+        f += 0.1250*noise( uv ); uv = m*uv;
+        f += 0.0625*noise( uv ); uv = m*uv;
+        return f;
+      }
+
       void main() {
-        // Very simple shading
         vec3 norm = normalize(vNormal);
-        float nDotL = dot(norm, normalize(vec3(0.25, 0.23, 0.73))) + 0.5;
 
         // Grab a base color value based on height
         float elevation = (vElevation - 375.0) * (1.0 / 300.0);
-        gl_FragColor = texture2D(gradient, vec2(elevation, 0.0)) * nDotL;
+
+        // Use triplanar projection to generate some detail texture
+        vec3 blendWeights = abs(norm);
+        // sum to one, l1norm!
+        blendWeights /= (blendWeights.x + blendWeights.y + blendWeights.z);
+        float scaleFactorXY = 1.0;
+        float scaleFactorZ = 2.0; // z varies less
+        vec3 color = vec3(fbm(vPos.yz * vec2(scaleFactorXY, scaleFactorZ)), fbm(vPos.zx * vec2(scaleFactorZ, scaleFactorXY)), fbm(vPos.xy * scaleFactorXY));
+        float noiseVal = dot(blendWeights, color) * 0.2 + 0.8;
+
+        // Very simple lighting
+        float nDotL = dot(norm, normalize(vec3(0.25, 0.23, 0.73))) + 0.5;
+
+        gl_FragColor = texture2D(gradient, vec2(elevation, 0.0)) * noiseVal * nDotL;
       }
     `,
     uniforms: {
