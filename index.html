@@ -1,0 +1,86 @@
+<head>
+  <title>Mapbox Viewer</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+  <link href="https://fonts.googleapis.com/css?family=Squada+One&display=swap" rel="stylesheet">
+  <style>
+    html, body {
+      margin: 0;
+      height: 100%;
+      font-size: 30;
+      font-family: 'Squada One';
+    }
+
+    #container {
+      display: flex;
+      flex-direction: column;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    #controls {
+      color: white;
+      background-color: #444444;
+      font-size: 40;
+      display: flex;
+      flex-direction: row;
+      justify-content: space-evenly;
+      align-items: center;
+      padding-top: 10px;
+    }
+
+    #threecontainer {
+      flex-grow: 2;
+    }
+
+    #three {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .title {
+      color: #ffaaaa;
+    }
+
+    input {
+      font-size: 30;
+      font-family: 'Squada One';
+    }
+
+    button {
+      font-size: 30;
+      font-family: 'Squada One';
+    }
+  </style>
+</head>
+
+<body>
+  <div id="container">
+    <div id="controls">
+      <div class="control title">
+        MAPBOX<br>VIEWER
+      </div>
+      <div class="control">
+        <label for="latitude">Latitude:</label>
+        <input type="text" name="latitude" id="latitude" value="0" size=6></input>
+      </div>
+      <div class="control">
+        <label for="longitude">Longitude:</label>
+        <input type="text" name="longitude" id="longitude" value="0" size=6></input>
+      </div>
+      <div class="control">
+        <label for="zoom">Zoom Level:</label>
+        <input type="text" name="zoom" id="zoom" value="0" size=6></input>
+      </div>
+      <div class="control">
+        <button id="submit">Display</button>
+        <!-- <input type="button" name="submit" id="submit" value="Display"></input> -->
+      </div>
+    </div>
+    <div id="threecontainer">
+      <canvas id="three"></canvas>
+    </div>
+  </div>
+  <script src="main.js" type="module"></script>
+</body>
